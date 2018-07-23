@@ -1,9 +1,9 @@
-FROM php:7.1-fpm-alpine
+FROM php:7.1-fpm
 
 ARG ZPUSH_URL=http://download.z-push.org/final/2.3/z-push-2.3.9.tar.gz
 ARG ZPUSH_CSUM=2c761f89f2922935d9e9ed29d5daf161
-ARG UID=1513
-ARG GID=1513
+ARG USERID=1513
+ARG GROUPID=1513
 
 ENV TIMEZONE=Europe/Zurich \
   IMAP_SERVER=localhost \
@@ -11,39 +11,32 @@ ENV TIMEZONE=Europe/Zurich \
   SMTP_SERVER=tls://localhost \
   SMTP_PORT=465
 
-ADD root /
-
 RUN set -ex \
   # Install important stuff
-  && apk add --update --no-cache \
-  alpine-sdk \
+  && apt-get update && apt-get install -yq \
   autoconf \
-  bash \
-  imap \
-  imap-dev \
   nginx \
-  openssl \
-  openssl-dev \
-  pcre \
-  pcre-dev \
+  libssl-dev \
+  libpcre3 \
+  libpcre3-dev \
   supervisor \
   tar \
-  tini \
-  wget
-  # Install php
-RUN docker-php-ext-configure imap --with-imap --with-imap-ssl \
+  wget \
+  libc-client-dev \
+  libkrb5-dev
+
+ADD root /
+
+RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
   && docker-php-ext-install imap pcntl sysvmsg sysvsem sysvshm \
   && pecl install APCu-5.1.8 \
   && docker-php-ext-enable apcu \
-  # Remove dev packages
-  && apk del --no-cache \
-  alpine-sdk \
-  autoconf \
-  openssl-dev \
-  pcre-dev
+  && apt remove -yq \
+  autoconf
+
   # Add user for z-push
-RUN addgroup -g ${GID} zpush \
-  && adduser -u ${UID} -h /opt/zpush -H -G zpush -s /sbin/nologin -D zpush \
+RUN groupadd --gid ${GROUPID} zpush \
+  && useradd --uid ${USERID} --home-dir /opt/zpush --gid zpush --shell /sbin/nologin zpush \
   && mkdir -p /opt/zpush
   # Install z-push
 RUN wget -q -O /tmp/zpush.tgz "$ZPUSH_URL" \
@@ -59,5 +52,5 @@ VOLUME ["/config"]
 
 EXPOSE 80
 
-ENTRYPOINT ["/sbin/tini", "--"]
+#ENTRYPOINT ["/sbin/tini", "--"]
 CMD /usr/local/bin/docker-run.sh
