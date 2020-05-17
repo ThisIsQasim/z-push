@@ -1,4 +1,4 @@
-FROM php:7.1-fpm
+FROM php:7.1-fpm-buster
 
 ARG ZPUSH_URL=http://download.z-push.org/final/2.3/z-push-2.3.9.tar.gz
 ARG ZPUSH_CSUM=2c761f89f2922935d9e9ed29d5daf161
